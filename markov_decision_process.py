@@ -61,7 +61,7 @@ class MarkovDecisionProcess(ABC, Generic[S, A]):
     ) -> Iterable[TransitionStep[S, A]]:
         state: State[S] = start_states.sample()
         
-        while isisntance(state, NonTerminal):
+        while isinstance(state, NonTerminal):
             action_distribution = policy.act(state)
             action = action_distribution.sample()
             next_distribution = self.step(state,action)

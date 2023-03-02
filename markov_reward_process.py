@@ -73,7 +73,7 @@ class FiniteMarkovRewardProcess(FiniteMarkovProcess[S],
         self,
         transition_reward_map: Mapping[S, FiniteDistribution[Tuple[S, float]]]
     ):
-        transition_map: Dict[S, FiniteDistribution[S]] ={}
+        transition_map: Dict[S, FiniteDistribution[S]] = {}
         for state, trans in transition_reward_map.items():
             probabilities: Dict[S, float] = defaultdict(float)
             for(next_state, _), probability in trans:

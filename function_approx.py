@@ -514,10 +514,105 @@ class DNNApprox(FunctionApprox[X]):
         else:
             return False
         
-# @dataclass(frozen=True)
-# class Tabular(FunctionApprox[X]):
-#     values_map: Mapping[X, float] = field(default_factory=lambda: {})
-#     counts_map: Mapping[X, int] = field(default_factory=lambda: {})
-#     count_to_weight_func: Callable[[int], float] = \
-#         field(default_factor
-                                
+##### Tabular Function Approximation ######
+'''
+It's like putting all the values in a table! 
+This is a special case of linear function approximation by setting a feature function
+phi_i(*) for each x_i as: phi_i(x_i) = 1 and phi_i(x)=0 for x!=x_i i.e. its an indicator
+function! the weights are the average of the y_values it has seen essentially
+'''
+@dataclass(frozen=True)
+class Tabular(FunctionApprox[X]):
+    values_map: Mapping[X, float] = field(default_factory=lambda: {})
+    counts_map: Mapping[X, int] = field(default_factory=lambda: {})
+    count_to_weight_func: Callable[[int], float] = \
+        field(default_factory=lambda: lambda n:1.0 / n)
+
+    def __add__(self, other: Tabular[X]) -> Tabular[X]:
+        values_map: Dict[X, float] = {}
+        counts_map: Dict[X, int] = {}
+        for key in set.union(
+                set(self.values_map.keys()),
+                set(other.values_map.keys())
+        ):
+            values_map[key] = self.values_map.get(key, 0.) + \
+                other.values_map.get(key, 0.)
+            counts_map[key] = counts_map.get(key, 0) + \
+                other.counts_map.get(key, 0)
+        return replace(
+            self,
+            values_map=values_map,
+            counts_map=counts_map
+        )
+
+    def __mul__(self, scalar: float) -> Tabular[X]:
+        return replace(
+            self,
+            values_map={x: scalar * y for x, y in self.values_map.items()}
+        )
+    
+    def objective_gradient(
+        self,
+        xy_vals_seq: Iterable[Tuple[X, float]],
+        obj_deriv_out_fun: Callable[[Sequence[X], Sequence[float]], float]
+    )-> Gradient[Tabular[X]]:
+        x_vals, y_vals = zip(*xy_vals_seq)
+        obj_deriv_out: np.ndarray = obj_deriv_out_fun(x_vals, y_vals)
+        sums_map: Dict[X, float] = defaultdict(float)
+        counts_map: Dict[X, int] = defaultdict(int)
+        for x, o in zip(x_vals, obj_deriv_out):
+            sums_map[x] += o
+            counts_map[x] += 1
+        
+        return Gradient(replace(
+            self,
+            values_map={x: sums_map[x] / counts_map[x] for x in sums_map},
+            counts_map = counts_map
+        ))
+    
+    def evaluate(self, x_values_seq: Iterable[X]) -> np.ndarray:
+        return np.array([self.values_map.get(x, 0) for x in x_values_seq])
+    
+    def update_with_gradient(
+        self,
+        gradient: Gradient[Tabular[X]]
+    ) -> Tabular[X]:
+        values_map: Dict[X, float] = dict(self.values_map)
+        counts_map: Dict[X, int] = dict(self.counts_map)
+        for key in gradient.function_approx.values_map:
+            counts_map[key] = counts_map.get(key, 0.)+ \
+                gradient.function_approx.counts_map[key]
+            weight: float = self.count_to_weight_func(counts_map[key])
+            values_map[key] = values_map.get(key, 0.) - \
+                weight * gradient.function_approx.values_map[key]
+        
+        return replace(
+            self,
+            values_map=values_map,
+            counts_map=counts_map
+        )
+    
+    def solve(
+        self,
+        xy_vals_seq: Iterable[Tuple[X, float]],
+        error_tolerance: Optional[float] = None
+    ) -> Tabular[X]:
+        values_map: Dict[X, float] = {}
+        counts_map: Dict[X, int] = {}
+        for x, y in xy_vals_seq:
+            counts_map[x] = counts_map.get(x, 0) + 1
+            weight: float = self.count_to_weight_func(counts_map[x])
+            values_map[x] = weight * y + (1 - weight) * values_map.get(x, 0.)
+        
+        return replace(
+            self,
+            values_map=values_map,
+            counts_map=counts_map
+        )
+    
+    def within(self, other: FunctionApprox[X], tolerance: float) -> bool:
+        if isinstance(other, Tabular):
+            return all(abs(self.values_map[s] - other.values_map.get(s, 0.))
+                       <= tolerance for s in self.values_map)
+        
+        return False 
