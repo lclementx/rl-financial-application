@@ -1,35 +1,31 @@
-from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from sklearn.neighbors import KNeighborsRegressor
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Interpolator:
+class QRegressor:
 
-    # Method can be "linear" or "nearest"
-    def __init__(self, method='linear'):
-        self.interp = None
-        self.method = method
+    def __init__(self, k=5, weights='distance'):
+        self.model = KNeighborsRegressor(k, weights)
 
     # Wt, xt, r are 1D list
-    def train(self, Wt, xt, r):
-        self.Wt = Wt
-        self.xt = xt
-        self.w_min = min(Wt)
-        self.w_max = max(Wt)
-        self.x_min = min(xt)
-        self.x_max = max(xt)
+    def train(self, W, x, r):
+        self.w_min = min(W)
+        self.w_max = max(W)
+        self.x_min = min(x)
+        self.x_max = max(x)
+        self.w_std = np.std(W)
+        self.x_std = np.std(x)
+        self.W = np.array(W) / self.w_std
+        self.x = np.array(x) / self.x_std
         self.segment = (self.x_max - self.x_min) / 200
-        if self.method == 'linear':
-            self.interp = LinearNDInterpolator(list(zip(Wt, xt)), r, fill_value=min(r))
-        if self.method == 'nearest':
-            self.interp = NearestNDInterpolator(list(zip(Wt, xt)), r, fill_value=min(r))
+        self.model.fit(np.array([W, x]).transpose(), r)
 
-    # Wt, xt can be scalar or list
+
     def estimate(self, Wt, xt):
-        if self.interp is None:
-            raise Exception('Interpolator not yet trained')
-        else:
-            return self.interp(Wt, xt)
+        Wt = np.array(Wt) / self.w_std
+        xt = np.array(xt) / self.x_std
+        return self.model.predict(np.array([Wt, xt]).transpose())
         
     # Input Wt to get x that maximize reward and the corresponding reward
     def find_max(self, Wt):
@@ -65,7 +61,7 @@ if __name__ == '__main__':
     x = rng.random(20) - 0.5
     r = 1 - np.hypot(w, x)
 
-    interpo = Interpolator('linear')
+    interpo = QRegressor()
     interpo.train(w, x, r)
     interpo.plot()
-    print(interpo.find_max(0))
+    # print(interpo.find_max(0))
