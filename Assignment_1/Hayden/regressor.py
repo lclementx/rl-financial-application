@@ -1,11 +1,12 @@
 from sklearn.neighbors import KNeighborsRegressor
 import numpy as np
 import matplotlib.pyplot as plt
+from random import random
 
 
 class QRegressor:
 
-    def __init__(self, k=5, weights='distance'):
+    def __init__(self, k=5, weights='uniform'):
         self.model = KNeighborsRegressor(n_neighbors=k, weights=weights)
 
     # Wt, xt, r are 1D list
@@ -54,10 +55,14 @@ class QRegressor:
         plt.show()
 
 
+def random_agent(Wt, spread=5):
+    return Wt * (random() - 0.5) * spread
+
+
 if __name__ == '__main__':
     rng = np.random.default_rng()
-    w = rng.random(500) - 0.5
-    x = rng.random(500) - 0.5
+    w = rng.random(300) - 0.5
+    x = rng.random(300) - 0.5
     r = 1 - np.hypot(w, x)
 
     model = QRegressor()
