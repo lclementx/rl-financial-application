@@ -25,14 +25,14 @@ def get_all_state_actions(
         current_states = next_states_list
     return state_tree
 
-def get_state_action_value_map(state_actions, reward_func, gamma, iterations):
+def get_state_action_value_map(state_actions, reward_func, gamma,alpha,iterations):
     
     def get_reward(state,action):
         next_states_probablity = state_actions[state][action]
         total_reward = 0
         for next_state, action_return_probability in next_states_probablity.items():
             if next_state.isTerminal():
-                utility = reward_func(next_state.wealth)
+                utility = reward_func(next_state.wealth,alpha)
                 total_reward += utility * action_return_probability
                 # print(f'Utility: {utility}, Action: {action}, Prob: {action_return_probability}, Total reward: {total_reward}')
             else:
