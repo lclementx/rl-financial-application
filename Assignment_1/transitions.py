@@ -2,6 +2,7 @@ from wealth_state import WealthState
 from investment_action import InvestmentAction
 from collections import defaultdict
 from typing import Dict, Sequence
+import numpy as np
 
 def get_all_state_actions(
     iterations, 
@@ -62,3 +63,15 @@ def retrieve_optimal_policy_from_values(state_action_value_map):
         value = action_values[action]
         policy[state][action]=1
     return policy
+
+def execute_policy(policy,initial_state,risky_return_dist,risk_free_rate):
+    state = initial_state
+    termination = state.termination_time
+    for _ in range(termination):
+        action_probs = policy[state]
+        action = max(action_probs, key=action_probs.get)
+        risky_return = np.random.choice([*risky_return_dist.keys()], 
+                                     p=[*risky_return_dist.values()])
+        next_state = action.action_to_next_state(state,risky_return,risk_free_rate)
+        print(f'State: {state}, Action: {action}')
+        state = next_state
