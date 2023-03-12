@@ -14,7 +14,7 @@ from investment_action import InvestmentAction
 from transitions import *
 from utility import *
 
-ITERATIONS=4
+ITERATIONS=10
 GAMMA=1
 COEFFICIENT_OF_CARA=1
 INVESTMENT_LIMIT_MAX=1
@@ -40,6 +40,14 @@ def execute_policy(policy,initial_state,risky_return_dist,risk_free_rate):
         state = next_state
 
 if __name__ == '__main__':
+    print('Attempt 1: Use a tree structure to support backward induction with code executed from tree.py')
+    import tree
+    print('----------------------------------------------------------------------------------------------------------------')
+    print('Attempt 2: Use Monte Carlo method and regression to estimate Q function for continous state and action with code executed from train.py')
+    print('**It may take a few minutes to complete**')
+    import train
+    print('----------------------------------------------------------------------------------------------------------------')
+
     initial_state = WealthState(time=0,wealth=INITIAL_WEALTH,termination_time=ITERATIONS)
     all_actions = InvestmentAction.get_all_actions(INVESTMENT_LIMIT_MAX,INVESTMENT_LIMIT_MIN,SPLITS)
     initial_action_probs = {a: 1/len(all_actions) for a in all_actions}
