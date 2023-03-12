@@ -1,15 +1,18 @@
 from sklearn.neighbors import KNeighborsRegressor
 import numpy as np
 import matplotlib.pyplot as plt
-from random import random
 
+'''
+This is a support file that that contain a single class QRegressor which use KNN regression to estimate the Q value
+'''
 
 class QRegressor:
 
-    def __init__(self, k=5, weights='uniform'):
+    # Larger k to smooth out the large variance from monte carlo
+    def __init__(self, k=50, weights='distance'):
         self.model = KNeighborsRegressor(n_neighbors=k, weights=weights)
 
-    # Wt, xt, r are 1D list
+    # Input Wt, xt, r to train the model, the three input variables should be list of same length
     def train(self, W, x, r):
         self.w_min = min(W)
         self.w_max = max(W)
@@ -17,10 +20,10 @@ class QRegressor:
         self.x_max = max(x)
         self.W = W
         self.x = x
-        self.segment = (self.x_max - self.x_min) / 200
+        self.segment = (self.x_max - self.x_min) / 100
         self.model.fit(np.array([W, x]).transpose(), r)
 
-    # Wt and xt can be scalar or list
+    # Estimate the Q value given Wt, xt as input and they should be of the same shape
     def estimate(self, Wt, xt):
         pred = self.model.predict(np.array([Wt, xt]).reshape(2, -1).transpose())
         if len(pred) == 1:
@@ -28,18 +31,19 @@ class QRegressor:
         else:
             return pred
         
-    # Input Wt to get x that maximize reward and the corresponding reward
+    # Input Wt to get the x that maximize reward and the corresponding reward
     def find_max(self, Wt):
         r_max = float('-inf')
         x_max = 0
-        for i in range(200):
+        for i in range(100):
             x = self.x_min + i * self.segment
             r = self.estimate(Wt, x)
             if r > r_max:
                 r_max = r
                 x_max = x
         return x_max, r_max
-        
+    
+    # Plot the learned Q function
     def plot(self):
         W = np.linspace(self.w_min, self.w_max)
         X = np.linspace(self.x_min, self.x_max)
@@ -54,11 +58,16 @@ class QRegressor:
         plt.axis("equal")
         plt.show()
 
+    # Plot the learned Q function sliced on a particular W
+    def plotSlice(self, w):
+        X = np.linspace(self.x_min, self.x_max)
+        W = [w for _ in range(len(X))]
+        R = self.estimate(W, X)
+        plt.plot(X, R)
+        plt.show()
 
-def random_agent(Wt, spread=5):
-    return Wt * (random() - 0.5) * spread
 
-
+# Learn and plot a function for testing
 if __name__ == '__main__':
     rng = np.random.default_rng()
     w = rng.random(300) - 0.5
