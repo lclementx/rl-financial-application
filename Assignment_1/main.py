@@ -51,5 +51,5 @@ if __name__ == '__main__':
     print('----------------------------------------------------------------------------------------------------------------')
     print('Attempt 4: Use Mathematical solution - derivation of the solution attached as part of the respository')
     print('----------------------------------------------------------------------------------------------------------------')
-    plot_analytical_solution(ITERATIONS,INITIAL_WEALTH,PROBABILITY_PRICE_UP,PRICE_A,PRICE_B,RISK_FREE_RATE,COEFFICIENT_OF_CARA)
+    plot_analytical_solution(ITERATIONS,INITIAL_WEALTH,PROBABILITY_PRICE_UP,PRICE_A,PRICE_B,RISK_FREE_RATE,COEFFICIENT_OF_CARA,GAMMA)
 

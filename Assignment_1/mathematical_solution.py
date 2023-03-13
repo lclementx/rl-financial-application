@@ -21,7 +21,8 @@ def plot_analytical_solution(
     PRICE_A, 
     PRICE_B, 
     RISK_FREE_RATE, 
-    COEFFICIENT_OF_CARA
+    COEFFICIENT_OF_CARA,
+    GAMMA
 ):
     time_step = [ _ for _ in range(ITERATIONS) ]
     wealth = INITIAL_WEALTH
@@ -39,8 +40,8 @@ def plot_analytical_solution(
             expected_wealth += prob * (optimal_alloc * (returns - RISK_FREE_RATE) + wealth * (1 + RISK_FREE_RATE))
 
         wealth=expected_wealth
-        y = [expected_utility(c,wealth,PROBABILITY_PRICE_UP, PRICE_A, PRICE_B, RISK_FREE_RATE, COEFFICIENT_OF_CARA) for c in x ]
-        y_alloc = expected_utility(optimal_alloc,wealth,PROBABILITY_PRICE_UP, PRICE_A, PRICE_B, RISK_FREE_RATE, COEFFICIENT_OF_CARA)
+        y = [((GAMMA ** (ITERATIONS - time)) * (1/COEFFICIENT_OF_CARA - expected_utility(c,wealth,PROBABILITY_PRICE_UP, PRICE_A, PRICE_B, RISK_FREE_RATE, COEFFICIENT_OF_CARA))) for c in x ]
+        y_alloc = (GAMMA ** (ITERATIONS - time)) * (1/COEFFICIENT_OF_CARA - expected_utility(optimal_alloc,wealth,PROBABILITY_PRICE_UP, PRICE_A, PRICE_B, RISK_FREE_RATE, COEFFICIENT_OF_CARA))
         axs[time].plot(x,y)
         axs[time].scatter([optimal_alloc],[y_alloc],color='r',s=50,marker='x')
         axs[time].text(optimal_alloc, y_alloc, '({}, {})'.format(optimal_alloc, y_alloc),fontsize
