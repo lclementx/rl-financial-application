@@ -164,7 +164,7 @@ alpha = 1
 
 # Create a tree and test its performance
 ta = TreeAgent()
-lucks = [int(p > random()) for _ in range(10)]
+# lucks = [int(p > random()) for _ in range(10)]
 lucks = [0, 1, 0, 1, 1, 1, 0, 1, 0, 0]
 print('Transition path (1 = up, 0 = down) -', lucks)
 for l in lucks:
