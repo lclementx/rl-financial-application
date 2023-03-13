@@ -4,4 +4,4 @@ Several approaches were taken to tackle the problem above:
 1. By considering discrete time and discrete action space (+1/+0) - enumerate all possible states, calculate the total reward for each state-action and thus retrieve the optimal policy by following the state actions witht the highest reward
 2. Use a tree structure to support backward induction with code executed from tree.py
 3. Use Monte Carlo method and regression to estimate Q function for continous state and action with code executed from train.py
-4. Use Mathematical solution - derivation of the solution attached as part of the respository
+4. Use Mathematical solution - derivation of the solution attached as part of the respository under /images directory
