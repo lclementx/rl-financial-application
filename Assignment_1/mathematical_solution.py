@@ -46,8 +46,8 @@ def plot_analytical_solution(
         axs[time].text(optimal_alloc, y_alloc, '({}, {})'.format(optimal_alloc, y_alloc),fontsize
     ='large')
         axs[time].set_title(f'Time Step: {time}')
-        axs[time].set_xlabel('alloc')
-        axs[time].set_ylabel('utility')
+        axs[time].set_xlabel('Allocation')
+        axs[time].set_ylabel('Expected Utility')
         print(f'Time: {time} - Optimal Allocation: {optimal_alloc}, Expected Utility: {y_alloc}')
 
     plt.show()
