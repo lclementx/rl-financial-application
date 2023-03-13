@@ -4,6 +4,17 @@ from collections import defaultdict
 from typing import Dict, Sequence
 import numpy as np
 
+'''
+Given an intiial state and all available actions, risky return distribution and risk free rate,
+create all the possible state + action pairs and the associated probability. I attach the next
+states as well given the action to make computation afterwards easier.
+
+Return:
+state: {
+    action1:{next_state1:probability,next_state2:probability}
+    action2:{next_state3:probability,next_state4:probability}
+}
+'''
 def get_all_state_actions(
     iterations, 
     available_actions, 
@@ -26,6 +37,15 @@ def get_all_state_actions(
         current_states = next_states_list
     return state_tree
 
+'''
+Given all the state_action probabilities above, try to calculate each state-action's reward given a specific reward function.
+
+Return:
+state: {
+    action1:reward1
+    action2:reward2
+}
+'''
 def get_state_action_value_map(state_actions, reward_func, gamma,alpha,iterations):
     
     def get_reward(state,action):
@@ -56,6 +76,10 @@ def get_state_action_value_map(state_actions, reward_func, gamma,alpha,iteration
     
     return state_action_value_map
 
+'''
+Once I have all the rewards for each state-action, my optimal policy for each state is to pick the action that will provide the
+highest reward.
+'''
 def retrieve_optimal_policy_from_values(state_action_value_map):
     policy = defaultdict(lambda: defaultdict(float))
     for state, action_values in state_action_value_map.items():
@@ -64,6 +88,9 @@ def retrieve_optimal_policy_from_values(state_action_value_map):
         policy[state][action]=1
     return policy
 
+'''
+Run a given policy for a given initial state to look at what the results will look like.
+'''
 def execute_policy(policy,initial_state,risky_return_dist,risk_free_rate):
     state = initial_state
     termination = state.termination_time
