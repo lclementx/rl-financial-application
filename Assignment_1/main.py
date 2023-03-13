@@ -35,7 +35,7 @@ if __name__ == '__main__':
     all_state_actions = get_all_state_actions(ITERATIONS,initial_action_probs,initial_state,RISKY_RETURN_DISTRIBUTION,RISK_FREE_RATE)
     state_action_value_map=get_state_action_value_map(all_state_actions,cara_func,GAMMA,COEFFICIENT_OF_CARA,ITERATIONS)
     policy = retrieve_optimal_policy_from_values(state_action_value_map)
-    print('Attempt 1: For Discrete Time, Discrete Action (+1,0) - calculate value for each state-action to find the optimal step')
+    print('Attempt 1: For Discrete Time, Discrete Action (+1,0) - calculate each state-action values to find the optimal step by taking the maxinum action')
     print('----------------------------------------------------------------------------------------------------------------')
     execute_policy(policy,initial_state,RISKY_RETURN_DISTRIBUTION,RISK_FREE_RATE)
     print('Attempt 2: Use a tree structure to support backward induction with code executed from tree.py')
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     print('----------------------------------------------------------------------------------------------------------------')
     print('Attempt 3: Use Monte Carlo method and regression to estimate Q function for continous state and action with code executed from train.py')
     print('**It may take a few minutes to complete**')
-    # import train
+    import train
     print('----------------------------------------------------------------------------------------------------------------')
     print('Attempt 4: Use Mathematical solution - derivation of the solution attached as part of the respository')
     print('----------------------------------------------------------------------------------------------------------------')
