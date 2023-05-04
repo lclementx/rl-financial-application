@@ -1,35 +1,35 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from matplotlib import pyplot as plt
 
-from random import random, seed
+from random import random
 
-
-# Pytorch model boiler plate
 class Policy(nn.Module):
 
     def __init__(self):
         super(Policy, self).__init__()
-        self.fc1 = nn.Linear(2, 32)
-        self.fc2 = nn.Linear(32 ,1)
+        self.fc1 = nn.Linear(3, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128 ,1)
         
     def forward(self, up_price, down_price, exercise_price):
-        up_ratio = up_price / exercise_price
-        down_ratio = down_price / exercise_price
-
-        x = torch.stack([up_ratio, down_ratio], dim=1)
-        return self.fc2(torch.tanh(self.fc1(x)))
+        # Aggregate the three input environment value and 
+        x = torch.stack([up_price, down_price, exercise_price], dim=1)
+        x = torch.tanh(self.fc1(x))
+        x = torch.tanh(self.fc2(x))
+        return self.fc3(x)
 
 def analytical_answer(up_price, down_price, exercise_price):
     payout_up = torch.where(exercise_price > up_price, exercise_price - up_price, torch.zeros_like(exercise_price))
     payout_down = torch.where(exercise_price > down_price, exercise_price - down_price, torch.zeros_like(exercise_price))
     return (payout_up - payout_down) / (up_price - down_price)
 
+# Configuration parameters
 up_factor = 1.1
 down_factor = 1 / up_factor
-risk_free_rate = 0.01
+risk_free_rate = 0.02
 exercise_price = 0.95
-
 risk_neutral_prob = (1 + risk_free_rate - down_factor) / (up_factor - down_factor)
 
 def generate_simulation():
@@ -52,12 +52,12 @@ def generate_simulation():
 
     return up_prices, down_prices, previous_prices, next_prices
 
-
 up_prices = []
 down_prices = []
 previous_prices = []
 next_prices = []
 
+# Sample 20 rounds of si
 for _ in range(20):
     up, dp, pp, np = generate_simulation()
     up_prices.extend(up)
@@ -72,33 +72,36 @@ previous_prices = torch.tensor(previous_prices)
 next_prices = torch.tensor(next_prices)
 
 policy = Policy()
-optimizer = optim.SGD(policy.parameters(), lr=0.0002)
+optimizer = optim.SGD(policy.parameters(), lr=0.001)
 
-def loss_function(hedge_ratio, previous_price, next_price, exercise_price):
+def position_change(hedge_ratio, previous_price, next_price, exercise_price):
     payout = torch.where(exercise_price > next_price, exercise_price - next_price, torch.zeros_like(next_price))
-    position_change = hedge_ratio * (next_price - previous_price) - payout
-    return torch.abs(position_change).mean()
+    return hedge_ratio * (next_price - previous_price) - payout
 
-# ans = analytical_answer(torch.tensor(1.3), torch.tensor(1 / 1.3), torch.tensor(0.9))
-# uloss = loss_function(ans, torch.tensor(1), torch.tensor(1.3), torch.tensor(0.9))
-# dloss = loss_function(ans, torch.tensor(1), torch.tensor(1 / 1.3), torch.tensor(0.9))
-# print(ans, uloss, dloss)
+def loss_function(hedge_ratio, up_price, down_price, current_price, exercise_price):
+    up_position_change = position_change(hedge_ratio, current_price, up_price, exercise_price)
+    down_position_change = position_change(hedge_ratio, current_price, down_price, exercise_price)
+    return torch.abs(up_position_change - down_position_change).mean()
 
-num_epochs = 2000
+# Pre-calculate correct answer for proof of convergence
 answer = analytical_answer(up_prices, down_prices, exercise_price)
-print(answer)
-min_loss = loss_function(answer, previous_prices, next_prices, exercise_price)
-print(min_loss)
 
+# Convert exercise price into suitable
+exercise_price = torch.full(previous_prices.size(), exercise_price)
+
+chart_x = []
+chart_y = []
+
+num_epochs = 500000
 for epoch in range(num_epochs):
     # Zero the gradients
     optimizer.zero_grad()
 
     # Forward pass
-    outputs = policy(up_prices, down_prices, exercise_price)
+    hedge_ratio = policy(up_prices, down_prices, exercise_price).view(-1)
     
     # Calculate the loss
-    loss = loss_function(outputs, previous_prices, next_prices, exercise_price)
+    loss = loss_function(hedge_ratio, up_prices, down_prices, previous_prices, exercise_price)
 
     # Backward pass
     loss.backward()
@@ -106,10 +109,18 @@ for epoch in range(num_epochs):
     # Update the weights
     optimizer.step()
 
-    if (epoch + 1) % 5 == 0:
-        print(f'Epoch {epoch + 1} loss:', float(loss))
-        # print(torch.linalg.vector_norm(outputs - answer))
+    if (epoch + 1) % 2000 == 0:
+        print(f'Epoch {epoch + 1} loss:', format(float(loss), '.8f'))
+        # Print difference from analytical answer to show convergence
+        print(f'Average deviation from analytical answer {float(torch.abs(hedge_ratio - answer).mean()):.8f}')
+        chart_x.append(epoch + 1)
+        chart_y.append(float(torch.abs(hedge_ratio - answer).mean()))
 
+# Save the model
+torch.save(policy.state_dict(), 'hedge_policy.pt')
 
-outputs = policy(up_prices, down_prices, exercise_price)
-print(outputs.tolist())
+# Create a line chart to show convergence as training progresses
+plt.plot(chart_x, chart_y)
+plt.title('Deviation from Analytical Solution')
+plt.xlabel('Steps')
+plt.show()
