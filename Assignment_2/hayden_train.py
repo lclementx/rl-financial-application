@@ -57,7 +57,7 @@ down_prices = []
 previous_prices = []
 next_prices = []
 
-# Sample 20 rounds of si
+# Sample 20 rounds of simulation
 for _ in range(20):
     up, dp, pp, np = generate_simulation()
     up_prices.extend(up)
