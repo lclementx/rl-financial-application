@@ -9,13 +9,13 @@ class Policy(nn.Module):
 
     def __init__(self):
         super(Policy, self).__init__()
-        self.fc1 = nn.Linear(3, 128)
+        self.fc1 = nn.Linear(5, 128)
         self.fc2 = nn.Linear(128, 128)
         self.fc3 = nn.Linear(128 ,1)
         
-    def forward(self, up_price, down_price, exercise_price):
+    def forward(self, up_price, down_price, exercise_price, cash, risk_free_factor):
         # Aggregate the three input environment value and 
-        x = torch.stack([up_price, down_price, exercise_price], dim=1)
+        x = torch.stack([up_price, down_price, exercise_price, cash, risk_free_factor], dim=1)
         x = torch.tanh(self.fc1(x))
         x = torch.tanh(self.fc2(x))
         return self.fc3(x)
@@ -37,39 +37,34 @@ def generate_simulation():
     current_price = 1
     up_prices = []
     down_prices = []
-    previous_prices = []
-    next_prices = []
+    prices = []
     
     for _ in range(9):
-        previous_prices.append(current_price)
+        prices.append(current_price)
         up_prices.append(current_price * up_factor)
         down_prices.append(current_price * down_factor)
         if random() < risk_neutral_prob:
             current_price *= up_factor
         else:
             current_price *= down_factor
-        next_prices.append(current_price)
 
-    return up_prices, down_prices, previous_prices, next_prices
+    return up_prices, down_prices, prices
 
 up_prices = []
 down_prices = []
-previous_prices = []
-next_prices = []
+prices = []
 
 # Sample 20 rounds of simulation
 for _ in range(20):
-    up, dp, pp, np = generate_simulation()
+    up, dp, cp = generate_simulation()
     up_prices.extend(up)
     down_prices.extend(dp)
-    previous_prices.extend(pp)
-    next_prices.extend(np)
+    prices.extend(cp)
 
 up_prices = torch.tensor(up_prices)
 down_prices = torch.tensor(down_prices)
 exercise_price = torch.tensor(exercise_price)
-previous_prices = torch.tensor(previous_prices)
-next_prices = torch.tensor(next_prices)
+prices = torch.tensor(prices)
 
 policy = Policy()
 optimizer = optim.SGD(policy.parameters(), lr=0.001)
@@ -86,8 +81,10 @@ def loss_function(hedge_ratio, up_price, down_price, current_price, exercise_pri
 # Pre-calculate correct answer for proof of convergence
 answer = analytical_answer(up_prices, down_prices, exercise_price)
 
-# Convert exercise price into suitable
-exercise_price = torch.full(previous_prices.size(), exercise_price)
+# Convert the constants to correct shpae
+exercise_price = torch.full(prices.size(), exercise_price)
+risk_free_factor = torch.ones_like(prices)
+cashes = torch.zeros_like(prices)
 
 chart_x = []
 chart_y = []
@@ -98,10 +95,10 @@ for epoch in range(num_epochs):
     optimizer.zero_grad()
 
     # Forward pass
-    hedge_ratio = policy(up_prices, down_prices, exercise_price).view(-1)
+    hedge_ratio = policy(up_prices, down_prices, exercise_price, cashes, risk_free_factor).view(-1)
     
     # Calculate the loss
-    loss = loss_function(hedge_ratio, up_prices, down_prices, previous_prices, exercise_price)
+    loss = loss_function(hedge_ratio, up_prices, down_prices, prices, exercise_price)
 
     # Backward pass
     loss.backward()
