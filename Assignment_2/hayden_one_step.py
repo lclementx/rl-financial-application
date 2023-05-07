@@ -114,7 +114,7 @@ for epoch in range(num_epochs):
         chart_y.append(float(torch.abs(hedge_ratio - answer).mean()))
 
 # Save the model
-torch.save(policy.state_dict(), 'hedge_policy.pt')
+torch.save(policy.state_dict(), 'parameters/one_step.pt')
 
 # Create a line chart to show convergence as training progresses
 plt.plot(chart_x, chart_y)

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from matplotlib import pyplot as plt
-from torch.optim.lr_scheduler import StepLR
 
 from random import random
 import itertools
@@ -25,11 +24,14 @@ class Policy(nn.Module):
 # Configuration parameters
 UP_FACTOR = 1.1
 DOWN_FACTOR = 1 / UP_FACTOR
-RISK_FREE_RATE = 0.02
+RISK_FREE_RATE = 0.03
 RISK_FREE_FACTOR = 1 + RISK_FREE_RATE
-EXERCISE_PRICE = 0.95
+INITIAL_PRICE = 1
+EXERCISE_PRICE = 1
 
-torch.autograd.set_detect_anomaly(True)
+# Probability of early exercise whenever an positive payout is achieved
+EARLY_EXERCISE_PROB = 0.2
+
 
 def variance_loss(policies, n=10):
 
@@ -45,10 +47,11 @@ def variance_loss(policies, n=10):
 
     for transition_path in itertools.product([UP, DOWN], repeat=n):
 
-        current_price = torch.tensor([1], dtype=torch.float32)
+        current_price = torch.tensor([INITIAL_PRICE], dtype=torch.float32)
         cash = torch.tensor([0], dtype=torch.float32)
         holding = torch.tensor([0], dtype=torch.float32)
-
+        
+        i = 10 # Timestep remaining until t = 10 
         for policy, up in zip(policies, transition_path):
 
             # Record situation the beginning of the timestep
@@ -67,44 +70,54 @@ def variance_loss(policies, n=10):
                 current_price = (current_price * down_factor).detach()
 
             cash = cash * risk_free_factor.detach()
+            i = i - 1
 
-        final_portfolio_values.append(cash + holding * current_price + torch.where(exercise_price > current_price, exercise_price - current_price, torch.zeros_like(current_price)))
+            if exercise_price[0] > current_price[0] and random() < EARLY_EXERCISE_PROB:
+                break
         
-    return torch.concat(final_portfolio_values).var()
+        portfolio_value = cash + holding * current_price - torch.where(exercise_price > current_price, exercise_price - current_price, torch.zeros_like(current_price))
+        final_portfolio_values.append(portfolio_value * (risk_free_factor ** i).detach())
+        
+    return torch.concat(final_portfolio_values).var(), torch.concat(final_portfolio_values).mean()
 
 policies = [Policy() for _ in range(10)]
 all_params = []
-for policy in policies:
+for i, policy in enumerate(policies):
+    state_dict = torch.load(f'parameters/european_t{i}.pt')
+    policy.load_state_dict(state_dict)
     all_params.extend(list(policy.parameters()))
-                      
-optimizer = optim.SGD(all_params, lr=1)
-# scheduler = StepLR(optimizer, step_size=20, gamma=0.2)
+ 
+optimizer = optim.SGD(all_params, lr=0.05)
 
 chart_x = []
 chart_y = []
 
-num_epochs = 60
+num_epochs = 100
 for epoch in range(num_epochs):
 
     # Zero the gradients
     optimizer.zero_grad()
     
     # Calculate the loss
-    loss = variance_loss(policies)
+    variance, mean = variance_loss(policies)
 
     # Backward pass
-    loss.backward()
+    variance.backward()
 
     # Update the weights
     optimizer.step()
     # scheduler.step()
 
-    print(f'Epoch {epoch + 1} loss:', format(float(loss), '.8f'))
+    print(f'Epoch {epoch + 1} loss:', format(float(variance), '.8f'))
     chart_x.append(epoch + 1)
-    chart_y.append(float(loss))
+    chart_y.append(float(variance))
+
+# Save the model
+for i, policy in enumerate(policies):
+    torch.save(policy.state_dict(), f'parameters/american_t{i}.pt')
 
 # Create a line chart to show convergence as training progresses
 plt.plot(chart_x, chart_y)
-plt.title('Deviation from Analytical Solution')
+plt.title('Variance on Portfolio Values (American)')
 plt.xlabel('Steps')
 plt.show()
