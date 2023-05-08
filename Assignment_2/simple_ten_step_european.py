@@ -118,8 +118,8 @@ for i, policy in enumerate(policies):
 paths_prob = torch.tensor(paths_prob, dtype=torch.float32)
 exercise_price = torch.full((2 ** 10,), EXERCISE_PRICE, dtype=torch.float32)
 paths_payout = torch.where(exercise_price > price_paths[10], exercise_price - price_paths[10], torch.zeros_like(exercise_price))
-option_option = (paths_prob * paths_payout).sum() / RISK_FREE_FACTOR ** 10
-print(f'Expected value option price:', format(option_option, '.8f'))
+option_value = (paths_prob * paths_payout).sum() / RISK_FREE_FACTOR ** 10
+print(f'Expected value option price:', format(option_value, '.8f'))
 
 # Create a line chart to show convergence as training progresses
 plt.plot(chart_x, chart_y)
